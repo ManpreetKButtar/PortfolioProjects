@@ -1,0 +1,67 @@
+CREATE TABLE players (
+    ID int,
+    name VARCHAR(255),
+    age INT,
+    nationality VARCHAR(25),
+    overall INT,
+    potential INT,
+    club VARCHAR(25),
+    value INT,
+    wage INT,
+    preferredfoot varchar(10),
+    jerseynumber INT,
+    joined DATE,
+    height VARCHAR(255),
+    weight INT,
+    penalties INT
+);
+
+Select * from players;
+
+COPY players (ID, name, age, nationality, overall, potential, club, value, wage, preferredfoot, jerseynumber, joined, height, weight, penalties) FROM '/Users/Manpreet/Documents/DataAnalysis/SQL/fifa19.csv ' DELIMITER ',' CSV HEADER; 
+
+ALTER TABLE players
+ALTER COLUMN club TYPE VARCHAR(225);
+
+
+-- How many players are there in the dataset?
+Select count(*) from players;
+
+-- How many nationalities do these players belong to?  
+Select Count(distinct nationality) from players;
+
+-- Which nationality has the highest number of players, what are the top 3 nationalities by # of players? What is the total wage given to all players?  
+Select  nationality, count(*) as freq from players group by nationality order by freq desc limit 3
+
+-- Whats the average and standard deviation?  Which player has the highest wage? Who has the lowest?  
+Select name, wage from players where wage in (Select  max (wage) as min from players);
+Select name, wage from players where wage in (Select  min (wage) as min from players);
+Select  avg(wage) as avg, stddev(wage) as stddev from players;
+
+
+-- The player having the best overall rating? Worst overall rating? 
+Select name, overall from players where overall in (Select max(overall) from players);
+Select name, overall from players where overall in (Select min(overall) from players);
+
+-- Club having the highest total overall rating? Highest Average of overall rating? 
+Select club, overall from players where overall in (Select max(overall) from players);
+Select name, overall from players where overall in (Select (overall) from players);
+
+Select avg(overall) from players;
+
+
+-- What is the distribution of players whose preferred foot is left vs right? 
+Select count(preferredfoot) as freq, preferredfoot from players group by preferredfoot;
+
+-- Which jersey number is the luckiest?  
+Select jerseynumber, sum(wage) from players group by jerseynumber order by sum(wage) desc;
+
+-- What is the frequency distribution of nationalities among players whose club name starts with M? 
+SELECT count(nationality) as freq, nationality FROM players WHERE club LIKE 'M%' group by nationality;
+
+-- How many players have joined their respective clubs in the date range 20 May 2018 to 10 April 2019 (both inclusive)?
+Select count(*) from players where joined between '20 May 2018' and '10 April 2019';
+
+-- How many players have joined their respective clubs date wise? How many players have joined their respective clubs yearly? 
+Select count(joined), joined from players group by joined;
+Select count(*), DATE_PART('year', joined) AS joined_year from players group by joined_year;
