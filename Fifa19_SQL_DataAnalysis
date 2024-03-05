@@ -65,3 +65,67 @@ Select count(*) from players where joined between '20 May 2018' and '10 April 20
 -- How many players have joined their respective clubs date wise? How many players have joined their respective clubs yearly? 
 Select count(joined), joined from players group by joined;
 Select count(*), DATE_PART('year', joined) AS joined_year from players group by joined_year;
+
+
+--String concatenation
+select concat(name,' | ', nationality) from players limit 10;
+Select lower(name)  from players;
+Select upper(name)  from players;
+SELECT LTRIM('   Hello') AS trimmed_string;
+SELECT RTRIM(' Hello    ') AS trimmed_string;
+select left(name,2) from players limit 10;
+select right(name,5) from players limit 10;
+select substring(name,3, 10) from players limit 10;
+
+--REGEX
+Select distinct(nationality) from players where nationality ~* '^a.*n$'; --starting with A/a end with n
+-- email : [a-zA-Z0-9._+@\w+\.com] 
+--digits --/d
+
+--Datetime
+select now(), current_date, current_time, current_timestamp from players limit 1;
+select date_part('year',joined) from players limit 1;
+SELECT EXTRACT(day FROM CURRENT_TIMESTAMP) AS current_year_date FROM players LIMIT 1;
+SELECT EXTRACT(month FROM CURRENT_TIMESTAMP)AS current_year_date FROM players LIMIT 1;
+SELECT EXTRACT(month FROM joined)AS current_year_date FROM players LIMIT 10;
+
+SELECT TO_DATE(EXTRACT(YEAR FROM CURRENT_TIMESTAMP)::text, 'YYYY') AS current_year_date  FROM players  LIMIT 1;
+select date_part('month',joined) from players limit 1;
+select date_part('day',joined) from players limit 1;
+
+SELECT AGE(CURRENT_DATE, joined) AS difference_from_joined FROM players LIMIT 1;
+
+SELECT TO_CHAR(joined, 'MM/DD/YYYY') AS formatted_joined_date, joined FROM players;
+
+SELECT value, wage, calc, ROUND(calc) AS rounded_calc, FLOOR(calc) AS floored_calc, CEILING(calc) AS ceiling_calc
+FROM (SELECT value, wage, CAST(value AS NUMERIC) / CAST(wage AS NUMERIC) AS calc FROM players  LIMIT 10) AS subquery;
+
+--CONDITIONAL
+SELECT NAME,
+CASE
+WHEN OVERALL>90 THEN 'BEST'
+WHEN OVERALL BETWEEN 80 AND 90 THEN 'HIGH PERFORMER'
+WHEN OVERALL BETWEEN 60 AND 80 THEN 'AVERAGE'
+ELSE 'BELOW PAR'
+END AS CATEGORY
+FROM PLAYERS;
+
+--Subqueries
+--Correlated
+ Select * from players where wage>(select  avg(wage) from players)
+--in/not in/ all/any
+Select * from players where age not in (select  max(age) from players group by nationality) 
+
+Select count(*) from players where overall<> all(select  max(overall) from players group by nationality) 
+
+Select count(*) from players where overall= any(select  max(overall) from players group by nationality) 
+
+--Multicolumn
+Select name, age, nationality from players where (nationality,age) in  (Select nationality, age from players where nationality ilike 'A%' and age < 25 );
+
+--correlated
+Select name, nationality, overall from players p1 where overall >   (Select avg(overall) from players p2 where p1.nationality=p2.nationality)  order by nationality;
+
+--Exists 
+Select name, nationality, overall, joined from players where Exists (select * from players where joined < '2016-07-01')
+
