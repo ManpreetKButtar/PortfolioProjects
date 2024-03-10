@@ -129,3 +129,241 @@ Select name, nationality, overall from players p1 where overall >   (Select avg(
 --Exists 
 Select name, nationality, overall, joined from players where Exists (select * from players where joined < '2016-07-01')
 
+-- Monthwise sales
+Select extract(month from order_date) as month,count(*) from orders group by month order by month;
+
+-- Downwards sales trend
+Select extract(month from order_date) as month,sum(final_price) from orders group by month order by month;
+
+Select extract(dow from order_date) as dow , sum(final_price) from orders group by dow order by dow;
+
+-- To round of unwanted values after a decimal in a column using ROUND():
+SELECT extract(month from order_date) as month, round(cast(SUM(discount) as numeric),2) as TotalDiscount, ROUND(CAST(SUM(final_price) AS numeric), 0) AS TotalRevenue FROM orders GROUP BY month ORDER BY month;
+
+-- To find the percentage change in discount over the months from the dataset:
+SELECT extract(month from order_date) as month, round(cast(SUM(final_price) as numeric),2) as TotalRevenue, SUM(discount)/SUM(final_price) as Discount_Sales_Ratio, SUM(discount) as TotalDiscount, COUNT(order_id) as OrderCount FROM orders GROUP BY month ORDER BY month;
+
+-- To find the total revenue based on the day of the week from the dataset:
+SELECT extract(dow from order_date) as dow, SUM(final_price) AS total_revenue, COUNT(order_id) AS order_count FROM orders GROUP BY WDAY order by WDAY;
+
+-- To find the total revenue based on the day of the week from the dataset using CASE statements:
+SELECT SUM(final_price) AS total_revenue, COUNT(order_id) AS order_count,
+CASE
+WHEN extract(dow from order_date) = 0 THEN 'Weekend'
+WHEN extract(dow from order_date) = 6 THEN 'Weekend'
+ELSE 'Weekday'
+END AS WeekDay FROM orders GROUP BY WeekDay;
+
+--Write a query to group the restaurants on the basis of the cuisines served from the restaurants table.
+Select count(*) as no_of_restaurants, cuisine from restaurants group by cuisine;
+
+--What is the total number of restaurants under each cuisine?
+Select count(*) as no_of_restaurants, cuisine from restaurants group by cuisine;
+
+--Write a query to retrieve the restaurant_id and item_names of all the non-vegetarian dishes from the food_items table.
+Select restaurant_id, food_type from food_items where lower(food_type) in ('non-veg','non-vegetarian');
+
+--Select Distinct food_type from food_items;
+Select Distinct(LOWER(food_type)) from food_items;
+
+--Write a query to find the number of orders placed on each Monday in the month of September. (Hint: The dates are 5th, 12th, 19th and 26th of September)
+Select count(*) from orders where TO_CHAR(order_date, 'Mon') = 'Sep' and extract(dow from order_date) =1;
+
+
+--Write a query to find the number of orders placed during each week in the month of September. Hint: Use cases and group by
+Select 
+	case
+		When EXTRACT(day FROM order_date) between 1 and 3 Then 'Week 1'
+		When EXTRACT(day FROM order_date) between 4 and 10 Then 'Week 2'
+		When EXTRACT(day FROM order_date) between 11 and 17 Then 'Week 3'
+		When EXTRACT(day FROM order_date) between 18 and 24 Then 'Week 4'
+		When EXTRACT(day FROM order_date) between 25 and 30 Then 'Week 5'
+	End as week_no, count(*)
+from Orders
+where EXTRACT(month FROM order_date)=9 and  EXTRACT(year FROM order_date)=2022 
+GROUP BY 
+    week_no;
+
+-- To find the percentage change in weekday and weekend revenue over the months from the dataset:
+SELECT *,
+round((( total_revenue-previous_rev)/previous_rev)*100) as
+Percentage_Change
+FROM
+(
+SELECT *,
+LAG(total_revenue) OVER (partition by Day_of_week) as
+previous_rev
+FROM
+(
+SELECT
+CASE
+WHEN Extract(dow FROM order_date) BETWEEN 1 AND 5 THEN 'Weekday'
+WHEN Extract(dow FROM order_date) IN (0, 6) THEN 'Weekend'
+END AS Day_of_week,
+Extract(month FROM order_date) AS Month,
+Round(SUM(final_price)::numeric,0) AS total_revenue
+FROM orders
+GROUP BY Day_of_week, Month
+ORDER BY Day_of_week)
+t1
+)
+t2;
+-- To find the average delivery time over the months from the dataset:
+SELECT Extract(month FROM order_date) AS Month,
+AVG(EXTRACT(EPOCH FROM delivered_time - order_time) / 60)  AS
+average_delivery_time
+FROM orders
+GROUP BY Month;
+-- To rank the the drivers and find the drivers with the least average delivery time over the months from the dataset:
+select * from
+(
+SELECT month, driver_id, avg_time, RANK() OVER (PARTITION BY month
+ORDER BY avg_time) AS driver_rank
+FROM (
+SELECT Extract(month FROM order_date) AS month, driver_id,
+AVG(EXTRACT(EPOCH FROM delivered_time - order_time) / 60) AS avg_time
+FROM orders
+GROUP BY month, driver_id
+) AS query_1
+) query_2
+where driver_rank between 1 and 5;
+----
+-- To find the number of orders of each food_type i.e. veg and non-veg:
+SELECT fi.food_type, SUM(oi.quantity) AS items_quatity FROM orders_items oi
+LEFT JOIN food_items fi ON oi.item_id = fi.item_id
+GROUP BY fi.food_type;
+-- To group the different entries for veg and non-veg using CASE statement
+and then find the number of orders of each food_type i.e. veg and non-veg:
+SELECT t2.food_type_new, SUM(t1.quantity) AS item_quantity
+FROM orders_items t1
+LEFT JOIN (
+SELECT item_id,
+CASE
+WHEN food_type LIKE 'veg%' THEN 'veg'
+ELSE 'non-veg'
+END AS food_type_new
+FROM food_items
+) t2 ON t1.item_id = t2.item_id
+GROUP BY t2.food_type_new;
+
+-- To find the number of orders received by each restaurant from the dataset:
+SELECT r.restaurant_name, r.id, r.cuisine, SUM(quantity) as item_quantity
+FROM restaurants r
+LEFT JOIN food_items fi ON r.id = fi.restaurant_id
+LEFT JOIN orders_items o ON fi.item_id = o.item_id
+GROUP BY r.id
+ORDER BY item_quantity;
+4. To find the number of restaurants that received no orders from the dataset:
+SELECT r.restaurant_name, r.restaurant_id, r.cuisine, SUM(quantity) as
+item_quantity
+FROM restaurants r
+LEFT JOIN food_items fi ON r.restaurant_id = fi.restaurant_id
+LEFT JOIN orders_items o ON fi.item_id = o.item_id
+GROUP BY r.restaurant_id
+HAVING item_quantity IS NULL
+ORDER BY item_quantity;
+
+
+--What is the highest number of orders placed by any customer?
+Select count(*) as fre, c.customer_id from orders o join customers c on o.customer_id=c.customer_id group by c.customer_id order by fre desc limit 1;
+
+--What is the average calories per dish for each cuisine type? Values are close to nearest integer.
+Select avg(calories),r.cuisine from restaurants r inner join food_items f on r.restaurant_id=f.restaurant_id group by r.cuisine;
+
+--What is the highest average order rating of a driver, rounded to a decimal place?
+SELECT d.name AS driver_name, AVG(o.order_rating) AS avg_order_rating FROM drivers d LEFT JOIN orders o ON d.driver_id = o.driver_id GROUP BY d.driver_id, d.name ORDER BY avg_order_rating DESC LIMIT 1;
+
+
+-- Write a SQL query to rank restaurants based on the number of food items they offer. Use a window function to achieve this.
+Select  restaurant_id, rank() over (partition by restaurant_id order by  item_name) from food_items;
+
+-- How can we use ranking functions to find the top 3 food items (based on the quantity ordered) for each restaurant?
+
+Select restaurant_id, f.item_id, item_name, sum(o.quantity) as quan from food_items f join orders_items o on f.item_id=o.item_id group by f.item_id order by quan desc limit 3;
+ 
+ WITH RankedFoodItems AS (
+    SELECT 
+        f.restaurant_id, 
+        f.item_id, 
+        f.item_name, 
+        SUM(o.quantity) AS total_quantity,
+        RANK() OVER (ORDER BY SUM(o.quantity) DESC) AS item_rank
+    FROM 
+        food_items f 
+    JOIN 
+        orders_items o ON f.item_id = o.item_id 
+    GROUP BY 
+        f.restaurant_id, f.item_id, f.item_name
+)
+SELECT 
+    restaurant_id, 
+    item_id, 
+    item_name, 
+    total_quantity
+FROM 
+    RankedFoodItems
+WHERE 
+    item_rank <= 3;
+	
+--How would you classify customers into different categories (like "low", "medium", and "high") based on the total amount they've spent on orders? Write a SQL query using the CASE statement to achieve this.
+
+Select  c.customer_id,
+Case
+when Sum(total_price) between 0 and 100 then 'Low'
+when Sum(total_price) between 101 and 200 then 'Medium'
+when Sum(total_price) between 201 and 400 then 'High'
+end as price, Sum(total_price)
+ from customers c left join orders o on c.customer_id=o.customer_id group by c.customer_id;
+
+--Write a SQL query to classify orders based on delivery time: "fast" if the delivery time is less than 30 minutes, "medium" if it's between 30 minutes and 1 hour, and "slow" if it's more than 1 hour. Then find the number of deliveries that come under “fast” category.
+
+SELECT order_id,customer_id,order_time, delivered_time,
+case
+when EXTRACT(EPOCH FROM (delivered_time - order_time))/60 <=30 then 'fast'
+when EXTRACT(EPOCH FROM (delivered_time - order_time))/60  between 31 and 60 then 'medium'
+when EXTRACT(EPOCH FROM (delivered_time - order_time))/60 >=30 then 'slow'
+end AS time_difference_seconds
+FROM orders;
+
+
+5. To create another table “vendors_metrics” with columns and set keys in the
+“competitor_analysis” database:
+CREATE table vendors_metrics
+(
+id int auto_increment primary key,
+company_id varchar(5),
+month int,
+num_orders int,
+num_sales float,
+foreign key(company_id) references vendors(id));
+To create another table “vendors_metrics” with columns and set keys in the
+“competitor_analysis” database:
+
+--To update the values of a column in the table “vendors_metrics”:
+UPDATE vendors_metrics
+SET num_sales=num_sales*100000
+
+-- To update the values of a column in the table “vendors_metrics” with
+criteria:
+UPDATE competitors_metrics SET num_sales=num_sales*100000 WHERE company_id='C4';
+
+-- To update a table by inserting a new column in the vendors metrics:
+ALTER TABLE competitor_analysis.vendors ADD COLUMN num_of_res INT;
+
+-- To update the datatype of a column in SQL:
+ALTER TABLE table_name MODIFY COLUMN column_name datatype;
+
+-- To find the month-on-month revenue for each of the competitor food delivery apps:
+SELECT t2.name, t1.month, t1.num_sales, ((t1.num_sales - lag(t1.num_sales) OVER (PARTITION BY t1.company_id ORDER BY t1.month)) / lag(t1.num_sales) OVER (PARTITION BY t1.company_id ORDER BY t1.month)) * 100 AS percentage_change
+FROM vendors_metrics t1 INNER JOIN vendors t2 ON t1.company_id = t2.company_id;
+
+-- To delete particular rows from a table based on a criteria in SQL:
+DELETE FROM table_name
+WHERE condition;
+
+--To delete a table completely in SQL:
+DROP TABLE table_name
+
+--To delete the rows in a table but maintain the table structure in SQL:
+TRUNCATE TABLE table_name;
+
