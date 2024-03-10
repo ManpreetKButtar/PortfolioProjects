@@ -253,7 +253,8 @@ LEFT JOIN food_items fi ON r.id = fi.restaurant_id
 LEFT JOIN orders_items o ON fi.item_id = o.item_id
 GROUP BY r.id
 ORDER BY item_quantity;
-4. To find the number of restaurants that received no orders from the dataset:
+
+-- To find the number of restaurants that received no orders from the dataset:
 SELECT r.restaurant_name, r.restaurant_id, r.cuisine, SUM(quantity) as
 item_quantity
 FROM restaurants r
